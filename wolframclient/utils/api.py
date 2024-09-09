@@ -81,6 +81,7 @@ zmq = API(
     SUB="zmq.SUB",
     SUBSCRIBE="zmq.SUBSCRIBE",
     NOBLOCK="zmq.NOBLOCK",
+    SNDMORE="zmq.SNDMORE",
     LAST_ENDPOINT="zmq.LAST_ENDPOINT",
     Again="zmq.Again",
 )
