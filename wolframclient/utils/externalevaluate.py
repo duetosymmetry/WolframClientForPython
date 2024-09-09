@@ -433,9 +433,7 @@ class SocketWriter:
 
 def handle_message(socket, consumer):
 
-    msg = socket.recv(copy=False).buffer
-
-    result = binary_deserialize(msg, consumer=consumer)
+    result = binary_deserialize(socket.recv(copy=False).buffer, consumer=consumer)
 
     sys.stdout.flush()
     return result
