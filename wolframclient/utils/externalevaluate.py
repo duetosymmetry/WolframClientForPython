@@ -410,14 +410,29 @@ class SocketWriter:
     def __init__(self, socket):
         self.socket = socket
 
-    def write(self, bytes):
-        self.socket.send(zmq.Frame(bytes))
+    def write(self, bytes, chunk_size=100 * 1024 * 8):
+
+        # messages bigger than 150 megabytes are causing problems, using zmq.SNDMORE to split the message in chunks
+
+        chunks = range(0, len(bytes), chunk_size)
+
+        total = len(chunks)
+
+        if total == 1:
+            # short circuit to avoid cloning the data for 1 message
+            self.socket.send(zmq.Frame(bytes))
+        else:
+            for t, i in enumerate(chunks):
+                self.socket.send(
+                    zmq.Frame(bytes[i : i + chunk_size]), zmq.SNDMORE if t + 1 < total else 0
+                )
 
     def send_side_effect(self, expr):
         self.write(export(self.keep_listening(expr), target_format="wxf"))
 
 
 def handle_message(socket, consumer):
+
     result = binary_deserialize(socket.recv(copy=False).buffer, consumer=consumer)
 
     sys.stdout.flush()
