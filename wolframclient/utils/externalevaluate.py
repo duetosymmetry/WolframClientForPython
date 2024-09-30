@@ -8,7 +8,6 @@ import logging
 import os
 import sys
 from functools import partial
-from operator import methodcaller
 from importlib import import_module
 
 from wolframclient.deserializers import binary_deserialize
@@ -23,7 +22,7 @@ from wolframclient.utils.api import ast, zmq
 from wolframclient.utils.api import timezone as tz
 from wolframclient.utils.datastructures import Settings
 from wolframclient.utils.encoding import force_text
-from wolframclient.utils.functional import first, identity, iterate, last
+from wolframclient.utils.functional import first, iterate, last
 
 """
 
@@ -138,8 +137,6 @@ def to_external_object(instance, objects_registry, force_externalobject=False):
     return func(wl.Inherited, pk, meta)
 
 
-
-
 if six.PY_38:
     # https://bugs.python.org/issue35766
     # https://bugs.python.org/issue35894
@@ -194,7 +191,7 @@ routes = registry()
 
 
 @routes.register_function
-def Eval(consumer, code, constants = {}):
+def Eval(consumer, code, constants={}):
 
     # this is creating a custom __loader__ that is returning the source code
     # traceback serializers is inspecting global variables and looking for a standard loader that can return source code.
@@ -239,13 +236,14 @@ def GetReference(consumer, input):
     except KeyError:
         raise KeyError("Object with id %s cannot be found in this session" % input)
 
+
 @routes.register_function
 def DelReference(consumer, input):
     try:
         del consumer.objects_registry[input]
     except KeyError:
         raise KeyError("Object with id %s cannot be found in this session" % input)
-    
+
 
 @routes.register_function
 def Set(consumer, value, *names):
@@ -262,8 +260,9 @@ def Call(consumer, result, *args):
 
     return result(*pos, **kwargs)
 
+
 @routes.register_function
-def Import(consumer, path, attr = None):
+def Import(consumer, path, attr=None):
 
     result = import_module(path)
 
@@ -291,13 +290,16 @@ def FromUnixTime(consumer, unixtime, timezone):
 
     return date
 
+
 @routes.register_function
 def FromTodayTime(consumer, unixtime, timezone):
     return FromUnixTime(consumer, unixtime, timezone).timetz()
 
+
 @routes.register_function
 def FromGregorianDay(consumer, year, month, day):
     return datetime.date(year, month, day)
+
 
 @routes.register_function
 def FromRational(consumer, a, b):
