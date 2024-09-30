@@ -170,6 +170,7 @@ pandas = API(
 
 pyarrow = API(
     Table="pyarrow.Table",
+    RecordBatch="pyarrow.RecordBatch",
     BufferOutputStream="pyarrow.BufferOutputStream",
     record_batch="pyarrow.record_batch",
     ipc="pyarrow.ipc",

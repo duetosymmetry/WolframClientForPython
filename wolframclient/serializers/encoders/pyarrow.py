@@ -6,14 +6,18 @@ from wolframclient.utils.dispatch import Dispatch
 encoder = Dispatch()
 
 
-@encoder.dispatch(pyarrow.Table)
-def encoder_pyarrow_table(serializer, o):
+@encoder.dispatch(pyarrow.RecordBatch)
+def encoder_pyarrow_table(serializer, batch):
     sink = pyarrow.BufferOutputStream()
-    batch = o.to_batches()[0]
-    strm = pyarrow.ipc.new_stream(sink, o.schema)
+    strm = pyarrow.ipc.new_stream(sink, batch.schema)
     strm.write_batch(batch)
     buf = sink.getvalue()
     return serializer.serialize_function(
         serializer.serialize_symbol(b"ImportByteArray"),
         (serializer.serialize_bytes(buf), serializer.serialize_string("ArrowIPC")),
     )
+
+
+@encoder.dispatch(pyarrow.Table)
+def encoder_pyarrow_table(serializer, o):
+    return serializer.encode(*o.to_batches())
