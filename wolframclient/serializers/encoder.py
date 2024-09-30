@@ -83,6 +83,7 @@ wolfram_encoder.register_modules(
     numpy="wolframclient.serializers.encoders.numpy.encoder",
     pandas="wolframclient.serializers.encoders.pandas.encoder",
     astropy="wolframclient.serializers.encoders.astropy.encoder",
+    pyarrow="wolframclient.serializers.encoders.pyarrow.encoder",
     PIL=(
         "wolframclient.serializers.encoders.pil.encoder",
         "wolframclient.serializers.encoders.numpy.encoder",

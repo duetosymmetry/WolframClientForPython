@@ -1,11 +1,11 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
-import sys
 from astropy.units import Quantity
 
 from wolframclient.utils.dispatch import Dispatch
 
 encoder = Dispatch()
+
 
 @encoder.dispatch(Quantity)
 def encode_quantity(serializer, o):
