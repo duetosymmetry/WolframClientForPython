@@ -18,7 +18,7 @@ from wolframclient.language.expression import WLFunction, WLSymbol
 from wolframclient.language.side_effects import side_effect_logger
 from wolframclient.serializers import export
 from wolframclient.utils import six
-from wolframclient.utils.api import ast, zmq
+from wolframclient.utils.api import ast, zmq, pyarrow
 from wolframclient.utils.api import timezone as tz
 from wolframclient.utils.datastructures import Settings
 from wolframclient.utils.encoding import force_text
@@ -320,6 +320,10 @@ def MethodCall(consumer, result, names, *args):
 def FromMissing(consumer):
     return
 
+
+@routes.register_function
+def FromArrow(consumer, bytes):
+    return pyarrow.ipc.RecordBatchFileReader(bytes).read_all()
 
 @routes.register_function
 def Partial(consumer, result, *args):
