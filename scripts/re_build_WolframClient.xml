@@ -1,11 +1,9 @@
 <project name='WolframClientForPython' basedir='..'>
 
 	<property name='component' value='${ant.project.name}' />
-	<property name='system_id' value='### Must be set by Jenkins ###' />
 
 	<property name='app.name' value='${component}' />
 	<property name='inputDir' value='${basedir}/docs' />
-	<property name='language' value='### Must be set by Jenkins ###' />
 
 	<property name="appPath" value="${appPath.default}" />
 
