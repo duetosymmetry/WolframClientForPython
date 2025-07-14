@@ -1,2 +1,5 @@
-Pygments==2.2
-pygments-mathematica==0.3.3
+Pygments==2.19.1
+pygments-mathematica==0.4.2
+sphinx
+numpy
+zmq
