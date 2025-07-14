@@ -122,10 +122,8 @@
 			<arg value="-m" />
 			<arg value="pip" />
 			<arg value="install" />
-			<arg value="numpy" />
-			<arg value="pygments-mathematica" />
-			<arg value="sphinx" />
-			<arg value="zmq" />
+			<arg value="-r" />
+			<arg value="${basedir}/docs/requirements.txt" />
 		</exec>
 
 		<!-- Build docs using Bash script -->
@@ -143,13 +141,13 @@
 
 	<target name='Deploy.WolframClientForPython.execute' extensionOf='Deploy.execute'>
 
-		<path id='ghpages.id'> 
+		<path id='ghpages.id'>
 			<fileset dir='${checkout_directory}'>
 				<include name="ghpages/*"/>
 			</fileset>
 		</path>
 
-		<property name='pages' refid='ghpages.id'/> 
+		<property name='pages' refid='ghpages.id'/>
 		<property name='src' value='${pages}' />
 
 		<property name='host' value='buildmgr@webtst4.wolfram.com' />
