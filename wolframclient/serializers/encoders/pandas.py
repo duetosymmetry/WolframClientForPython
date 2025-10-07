@@ -19,6 +19,7 @@ encoders = dict(
     association = composition(arrow_to_association),
     dataset = composition(arrow_to_association, wl.Dataset),
     list = composition(arrow_to_association, wl.Normal),
+    values = composition(wl.Normal),
 )
 
 def internal_serialize(serializer, o, prop_name, default, preprocessor):
@@ -46,10 +47,11 @@ def internal_serialize(serializer, o, prop_name, default, preprocessor):
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(serializer, o, prop_name = "pandas_dataframe_head", default = 'dataset', preprocessor = pyarrow.record_batch)
 
-
+@encoder.dispatch(pandas.DatetimeIndex)
+def encoder_panda_dataframe(serializer, o):
+    return internal_serialize(serializer, o, prop_name = "pandas_dataframe_head", default = 'values', preprocessor = pyarrow.array)
 
 @encoder.dispatch(pandas.Series)
 def encode_panda_series(serializer, o):
-
     return internal_serialize(serializer, o, prop_name = "pandas_dataframe_head", default = 'association', preprocessor = pyarrow.array)
 
