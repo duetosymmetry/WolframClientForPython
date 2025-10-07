@@ -30,3 +30,17 @@ def encoder_pyarrow_batch(serializer, batch):
 @encoder.dispatch(pyarrow.Table)
 def encoder_pyarrow_table(serializer, table):
     return _encode_batches(serializer, table.to_batches(), table.schema)
+
+
+@encoder.dispatch(pyarrow.Array)
+def encoder_pyarrow_array(serializer, array):
+    batch = pyarrow.RecordBatch.from_arrays([array], names=[""])
+
+    return serializer.serialize_function(
+        serializer.serialize_symbol(b"Part"),
+        (
+            _encode_batches(serializer, (batch,), batch.schema),
+            serializer.serialize_symbol(b"All"),
+            serializer.serialize_int(1),
+        ),
+    )
