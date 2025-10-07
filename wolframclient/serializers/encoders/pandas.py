@@ -5,6 +5,7 @@ from itertools import starmap
 
 from wolframclient.utils.api import pandas, pyarrow
 from wolframclient.utils.dispatch import Dispatch
+from wolframclient.language import wl
 
 encoder = Dispatch()
 
@@ -147,42 +148,30 @@ def encode_panda_series(serializer, o):
     return encoder(serializer, o, safe_pandas_length(o))
 
 
-def encode_dataframe_as_assoc(serializer, o, length):
-    use_ts = normalized_prop_timeseries(serializer)
-    return serializer.serialize_association(
-        (
-            (
-                serializer.encode(k),
-                get_series_encoder_from_index(v.index, use_ts, "association")(
-                    serializer, v, safe_pandas_length(v)
-                ),
-            )
-            for k, v in o.T.items()
-        ),
-        length=length,
-    )
 
 
-def encode_dataframe_as_dataset(serializer, o, length):
-    return serializer.serialize_function(
-        serializer.serialize_symbol(b"Dataset"),
-        (encode_dataframe_as_assoc(serializer, o, length),),
-    )
 
 
-def encode_dataframe_as_tabular(serializer, o):
-    return serializer.encode(pyarrow.record_batch(o))
+
+def arrow_to_association(o):
+    return wl.AssociationThread(wl.Range(0, len(o) - 1), wl.Normal(o))
 
 
 @encoder.dispatch(pandas.DataFrame)
 def encoder_panda_dataframe(serializer, o):
+
+    tabular = pyarrow.record_batch(o)
+
+
     head = serializer.get_property("pandas_dataframe_head", d=None)
     if head is None or head == "dataset":
-        return encode_dataframe_as_dataset(serializer, o, safe_pandas_length(o.index))
+        return serializer.encode(
+            wl.Dataset(arrow_to_association(tabular))
+        )
     elif head == "tabular":
-        return encode_dataframe_as_tabular(serializer, o)
-    elif head in PANDAS_PROPERTIES["pandas_dataframe_head"]:
-        return encode_dataframe_as_assoc(serializer, o, safe_pandas_length(o.index))
+        return serializer.encode(tabular)
+    elif head == "association":
+        return serializer.encode(arrow_to_association(tabular))
     else:
         raise ValueError(
             "Invalid value for property 'pandas_dataframe_head'. Expecting one of ({}), got {}.".format(
