@@ -18,10 +18,10 @@ def arrow_to_association(o):
 
 encoders = dict(
     tabular=identity,
-    association=composition(arrow_to_association),
+    association=arrow_to_association,
     dataset=composition(arrow_to_association, wl.Dataset),
     list=composition(arrow_to_association, wl.Normal),
-    values=composition(wl.Normal),
+    values=wl.Normal,
 )
 
 
