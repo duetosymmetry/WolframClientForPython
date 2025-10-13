@@ -12,20 +12,20 @@ from wolframclient.utils.datastructures import Settings
 encoder = Dispatch()
 
 
-def arrow_to_association(o):
-    return wl.AssociationThread(wl.Range(0, len(o) - 1), wl.Normal(o))
+def arrow_to_association(o, index = None):
+    return wl.AssociationThread(index or wl.Range(0, len(o) - 1), wl.Normal(o))
 
 
 encoders = dict(
-    tabular=identity,
+    tabular=lambda o, i: o,
+    values=lambda o, i: wl.Normal(o),
     association=arrow_to_association,
     dataset=composition(arrow_to_association, wl.Dataset),
     list=composition(arrow_to_association, wl.Normal),
-    values=wl.Normal,
 )
 
 
-def internal_serialize(serializer, o, prop_name, default, preprocessor):
+def internal_serialize(serializer, o, index, prop_name, default):
 
     head = serializer.get_property(prop_name, d=None) or default
 
@@ -36,19 +36,19 @@ def internal_serialize(serializer, o, prop_name, default, preprocessor):
             )
         )
 
-    func = composition(preprocessor, encoders[head], serializer.encode)
+    func = composition(encoders[head], serializer.encode)
 
-    return func(o)
+    return func(o, index)
 
 
 @encoder.dispatch(pandas.DataFrame)
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        o,
+        pyarrow.record_batch(o),
+        index=None,
         prop_name="pandas_dataframe_head",
         default="dataset",
-        preprocessor=pyarrow.record_batch,
     )
 
 
@@ -56,10 +56,10 @@ def encoder_panda_dataframe(serializer, o):
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        o,
+        pyarrow.array(o),
+        index=None,
         prop_name="pandas_dataframe_head",
         default="values",
-        preprocessor=pyarrow.array,
     )
 
 
@@ -67,8 +67,8 @@ def encoder_panda_dataframe(serializer, o):
 def encode_panda_series(serializer, o):
     return internal_serialize(
         serializer,
-        o,
-        prop_name="pandas_dataframe_head",
-        default="association",
-        preprocessor=pyarrow.array,
+        pyarrow.array(o),
+        index=o.index.tolist(),
+        prop_name="pandas_series_head",
+        default="list",
     )
