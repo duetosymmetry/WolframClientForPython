@@ -175,7 +175,6 @@ pyarrow = API(
     Table="pyarrow.Table",
     RecordBatch="pyarrow.RecordBatch",
     Array="pyarrow.Array",
-    array="pyarrow.array",
     BufferOutputStream="pyarrow.BufferOutputStream",
     record_batch="pyarrow.record_batch",
     ipc="pyarrow.ipc",

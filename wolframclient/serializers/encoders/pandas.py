@@ -56,7 +56,7 @@ def encoder_panda_dataframe(serializer, o):
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        pyarrow.array(o),
+        pyarrow.Array.from_pandas(o),
         index=o.index.tolist(),
         prop_name="pandas_dataframe_head",
         default="values",
@@ -67,7 +67,7 @@ def encoder_panda_dataframe(serializer, o):
 def encode_panda_series(serializer, o):
     return internal_serialize(
         serializer,
-        pyarrow.array(o),
+        pyarrow.Array.from_pandas(o),
         index=o.index.tolist(),
         prop_name="pandas_series_head",
         default="association",
