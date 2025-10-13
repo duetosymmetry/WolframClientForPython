@@ -45,8 +45,8 @@ def internal_serialize(serializer, o, index, prop_name, default):
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        pyarrow.record_batch(o),
-        index=None,
+        pyarrow.RecordBatch.from_pandas(o, preserve_index = False),
+        index=o.index.tolist(),
         prop_name="pandas_dataframe_head",
         default="dataset",
     )
@@ -57,7 +57,7 @@ def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
         pyarrow.array(o),
-        index=None,
+        index=o.index.tolist(),
         prop_name="pandas_dataframe_head",
         default="values",
     )
@@ -70,5 +70,5 @@ def encode_panda_series(serializer, o):
         pyarrow.array(o),
         index=o.index.tolist(),
         prop_name="pandas_series_head",
-        default="list",
+        default="association",
     )
