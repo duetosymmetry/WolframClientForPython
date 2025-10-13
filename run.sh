@@ -10,5 +10,5 @@ uv run                                            \
     --no-config                                   \
     --python 3.13.3                               \
     --python-preference only-managed              \
-    --with black --with pyarrow --with pandas --with zmq \
+    --with black --with pyarrow --with pandas --with zmq --with oauthlib --with Pillow \
     --module wolframclient "$@"

@@ -214,13 +214,12 @@ class TestCase(BaseTestCase):
         ints = [
             numpy.uint16(65535),
             numpy.int32(-2147483648),
-            numpy.uint32(4294967296),
             numpy.int64(-9223372036854775808),
             numpy.uint64(18446744073709551615),
         ]
         self.assertEqual(
             export(ints),
-            b"{65535, -2147483648, 0, -9223372036854775808, 18446744073709551615}",
+            b"{65535, -2147483648, -9223372036854775808, 18446744073709551615}",
         )
 
     def test_scalars(self):

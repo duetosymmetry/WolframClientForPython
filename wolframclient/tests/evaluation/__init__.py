@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import os
 
+
 from wolframclient.utils import six
 
 # The evaluation modules is only supported on python 3.5+, because of asyncio
@@ -21,6 +22,7 @@ __all__ = ["load_tests"]
 
 
 def load_tests(loader, tests, pattern):
+    import unittest
     suite = unittest.TestSuite()
     for module in test_modules:
         if fnmatch.fnmatch(os.path.basename(module.__file__), pattern):
