@@ -6,7 +6,7 @@ from collections import defaultdict
 from functools import partial
 
 from wolframclient.serializers.utils import safe_len
-from wolframclient.utils.api import multiprocessing, pkg_resources
+from wolframclient.utils.api import multiprocessing
 from wolframclient.utils.dispatch import Dispatch
 from wolframclient.utils.environment import installation_version
 from wolframclient.utils.functional import composition, is_iterable, iterate, map
@@ -36,9 +36,6 @@ class WolframDispatch(Dispatch):
             logger.info(
                 "Registering Wolfram encoders plugins associated with entrypoint %s." % name
             )
-        for entry_point in pkg_resources.iter_entry_points(group=name):
-            self.plugins_registry[entry_point.name].extend(entry_point.module_name)
-
     def _update_dispatch(self):
         if self.modules:
             installed_modules = sys.modules.keys()

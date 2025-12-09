@@ -13,11 +13,14 @@
 	<!--
 		Component build (platform-independent)
 	-->
-	<target name='Component.WolframClientForPython.execute' extensionOf='Component.execute'>
+	<target
+        name='Component.WolframClientForPython.execute'
+        extensionOf='Component.execute'
+    >
 
 		<!-- Copy all files and the wolframclient folder in base directory -->
 		<copy todir='${files_directory}/${component}'>
-			<fileset dir='${basedir}' >
+			<fileset dir='${basedir}'>
 				<exclude name='.*' />
 				<exclude name='scripts/' />
 				<exclude name='docs/' />
@@ -30,7 +33,10 @@
 		Paclet
 	-->
 
-	<target name='Paclet.WolframClientForPython.init.custom' extensionOf='Paclet.init.custom'>
+	<target
+        name='Paclet.WolframClientForPython.init.custom'
+        extensionOf='Paclet.init.custom'
+    >
 
 		<!--
 			Prevent Paclet.clean from deleting files_directory,
@@ -42,8 +48,15 @@
 
 	</target>
 
-	<target name='Paclet.WolframClientForPython.execute' extensionOf='Paclet.execute'>
-		<mathematica exe="${mathExe}" fresh="true" quit="true"><![CDATA[
+	<target
+        name='Paclet.WolframClientForPython.execute'
+        extensionOf='Paclet.execute'
+    >
+		<mathematica
+            exe="${mathExe}"
+            fresh="true"
+            quit="true"
+        ><![CDATA[
 
 			Print["$Version: ", $Version];
 			Print["$InstallationDirectory: ", $InstallationDirectory];
@@ -68,7 +81,10 @@
 		Installer Package
 	-->
 
-	<target name='Installer.WolframClientForPython.execute' extensionOf='Deploy.execute'>
+	<target
+        name='Installer.WolframClientForPython.execute'
+        extensionOf='Deploy.execute'
+    >
 
 		<!-- Ensure all necessary modules are installed -->
 		<exec executable="${python.exe}">
@@ -91,8 +107,8 @@
 		<!-- Copy produced files to Files dir -->
 		<copy todir='${files_directory}'>
 			<fileset dir='${basedir}/dist'>
-				<include name="*.whl"/>
-				<include name="*.tar.gz"/>
+				<include name="*.whl" />
+				<include name="*.tar.gz" />
 			</fileset>
 		</copy>
 
@@ -102,13 +118,19 @@
 		Static Web Pages
 	-->
 
-	<target name='Web.WolframClientForPython.execute.check-custom' extensionOf='Web.execute.check-custom' >
+	<target
+        name='Web.WolframClientForPython.execute.check-custom'
+        extensionOf='Web.execute.check-custom'
+    >
 
 		<property name='Web.execute.has-custom' value='true' />
 
 	</target>
 
-	<target name='Web.WolframClientForPython.execute.custom' extensionOf='Web.execute.custom'>
+	<target
+        name='Web.WolframClientForPython.execute.custom'
+        extensionOf='Web.execute.custom'
+    >
 
 		<!-- Create a virtual environment to build docs in -->
 		<exec executable="${python.exe}">
@@ -122,17 +144,15 @@
 			<arg value="-m" />
 			<arg value="pip" />
 			<arg value="install" />
-			<arg value="numpy" />
-			<arg value="pygments-mathematica" />
-			<arg value="sphinx" />
-			<arg value="zmq" />
+			<arg value="-r" />
+			<arg value="${basedir}/docs/requirements.txt" />
 		</exec>
 
 		<!-- Build docs using Bash script -->
-		<exec dir= "${basedir}/docs" executable="build_docs.sh">
+		<exec dir="${basedir}/docs" executable="build_docs.sh">
 			<arg value="-b" />
 			<arg value="${files_directory}" />
-			<env key="PATH" path="${tmp_directory}/venv/bin:${env.PATH}"/>
+			<env key="PATH" path="${tmp_directory}/venv/bin:${env.PATH}" />
 		</exec>
 
 	</target>
@@ -141,22 +161,28 @@
 		Deploy Web Pages
 	-->
 
-	<target name='Deploy.WolframClientForPython.execute' extensionOf='Deploy.execute'>
+	<target
+        name='Deploy.WolframClientForPython.execute'
+        extensionOf='Deploy.execute'
+    >
 
-		<path id='ghpages.id'> 
+		<path id='ghpages.id'>
 			<fileset dir='${checkout_directory}'>
-				<include name="ghpages/*"/>
+				<include name="ghpages/*" />
 			</fileset>
 		</path>
 
-		<property name='pages' refid='ghpages.id'/> 
+		<property name='pages' refid='ghpages.id' />
 		<property name='src' value='${pages}' />
 
 		<property name='host' value='buildmgr@webtst4.wolfram.com' />
-		<property name='dest' value='/www/sites/reference.wolfram.com/htdocs/language/WolframClientForPython' />
+		<property
+            name='dest'
+            value='/www/sites/reference.wolfram.com/htdocs/language/WolframClientForPython'
+        />
 
 		<condition property='scp.cmd' value='pscp' else='scp'>
-			<os family='windows'/>
+			<os family='windows' />
 		</condition>
 
 		<echo message="copy ${src} to ${host}:${dest}" />
