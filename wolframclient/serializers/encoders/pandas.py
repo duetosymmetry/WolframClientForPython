@@ -47,7 +47,7 @@ def encoder_panda_dataframe(serializer, o):
         pyarrow.RecordBatch.from_pandas(o, preserve_index=False),
         index=o.index.tolist(),
         prop_name="pandas_dataframe_head",
-        default="dataset",
+        default="tabular",
     )
 
 
@@ -58,7 +58,7 @@ def encoder_panda_dataframe(serializer, o):
         pyarrow.Array.from_pandas(o),
         index=o.index.tolist(),
         prop_name="pandas_dataframe_head",
-        default="values",
+        default="tabular",
     )
 
 
@@ -72,5 +72,5 @@ def encode_panda_series(serializer, o):
         pyarrow.Array.from_pandas(o),
         index=o.index.tolist(),
         prop_name="pandas_series_head",
-        default="association",
+        default="tabular",
     )
