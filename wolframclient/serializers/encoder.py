@@ -1,7 +1,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import sys
+import sys, os
 from collections import defaultdict
 from functools import partial
 
@@ -224,4 +224,4 @@ class Encoder:
 
         Set `d` to the default value if key was not present.
         """
-        return self._properties.get(key, d)
+        return self._properties.get(key) or os.environ.get('WOLFRAMCLIENT_{}'.format(key.upper())) or d
