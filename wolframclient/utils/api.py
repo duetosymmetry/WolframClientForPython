@@ -140,9 +140,7 @@ numpy = API(
 
 multiprocessing = API(Lock="wolframclient.utils.lock.Lock")
 
-PIL = API(
-    Image="PIL.Image.Image", fromarray="PIL.Image.fromarray", open="PIL.Image.open"
-)
+PIL = API(Image="PIL.Image.Image", fromarray="PIL.Image.fromarray", open="PIL.Image.open")
 
 base64 = API(b64encode="base64.b64encode")
 
@@ -150,11 +148,10 @@ pandas = API(
     Series="pandas.Series",
     DataFrame="pandas.DataFrame",
     DatetimeIndex="pandas.DatetimeIndex",
-    TimedeltaIndex="pandas.TimedeltaIndex",
     MultiIndex="pandas.MultiIndex",
     SparseSeries="pandas.SparseSeries",
     SparseArray="pandas.SparseArray",
-    bdate_range="pandas.bdate_range",
+    RangeIndex="pandas.RangeIndex",
 )
 
 pyarrow = API(
@@ -179,10 +176,6 @@ aiohttp = API(
     StringPayload="aiohttp.StringPayload",
 )
 
-ssl = API(
-    SSLContext="ssl.SSLContext", create_default_context="ssl.create_default_context"
-)
+ssl = API(SSLContext="ssl.SSLContext", create_default_context="ssl.create_default_context")
 
-externalevaluate = API(
-    start_zmq_loop="wolframclient.utils.externalevaluate.start_zmq_loop"
-)
+externalevaluate = API(start_zmq_loop="wolframclient.utils.externalevaluate.start_zmq_loop")
