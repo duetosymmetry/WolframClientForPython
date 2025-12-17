@@ -9,11 +9,40 @@ from wolframclient.utils.datastructures import Settings
 from wolframclient.utils.dispatch import Dispatch
 from wolframclient.utils.functional import composition, identity
 
+
+def default_column_formatter(number):
+    return "Col{}".format(number)
+
+
+DEFAULT_SERIES_NAME = default_column_formatter(0)
+
 encoder = Dispatch()
 
 
-def arrow_to_association(o, index=None):
-    return wl.AssociationThread(index or wl.Range(0, len(o) - 1), wl.Normal(o))
+def is_auto_index(index):
+    return isinstance(index, pandas.RangeIndex)
+
+
+def set_default_names(index, func=default_column_formatter):
+    """
+    Set names for index levels that are None using a function.
+
+    Parameters:
+    - index: Index or MultiIndex
+    - func: callable that takes an integer (level position) and returns a name
+
+    Returns:
+    - Index with updated names
+    """
+
+    new_names = [
+        name if name is not None else func(i + 1) for i, name in enumerate(index.names)
+    ]
+    return index.set_names(new_names)
+
+
+def arrow_to_association(o, index):
+    return wl.AssociationThread(index.to_list(), wl.Normal(o))
 
 
 encoders = dict(
@@ -25,7 +54,7 @@ encoders = dict(
 )
 
 
-def internal_serialize(serializer, o, index, prop_name, default, from_function):
+def internal_serialize(serializer, o, prop_name, default):
     head = serializer.get_property(prop_name, d=None) or default
 
     if not head in encoders:
@@ -35,20 +64,23 @@ def internal_serialize(serializer, o, index, prop_name, default, from_function):
             )
         )
 
+    if not is_auto_index(o.index):
+        o.index = set_default_names(o.index)
+
     func = composition(encoders[head], serializer.encode)
 
-    return func(from_function(o, preserve_index = head =='tabular'), index)
+    return func(
+        pyarrow.RecordBatch.from_pandas(
+            o, preserve_index=not is_auto_index(o.index) and head == "tabular"
+        ),
+        o.index,
+    )
 
 
 @encoder.dispatch(pandas.DataFrame)
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
-        serializer,
-        o,
-        from_function = pyarrow.RecordBatch.from_pandas,
-        index=o.index.tolist(),
-        prop_name="pandas_dataframe_head",
-        default="tabular",
+        serializer, o, prop_name="pandas_dataframe_head", default="tabular"
     )
 
 
@@ -56,9 +88,7 @@ def encoder_panda_dataframe(serializer, o):
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        o,
-        from_function = pyarrow.Array.from_pandas,
-        index=o.index.tolist(),
+        o.to_frame(name=DEFAULT_SERIES_NAME),
         prop_name="pandas_dataframe_head",
         default="tabular",
     )
@@ -71,9 +101,7 @@ def encode_panda_series(serializer, o):
 
     return internal_serialize(
         serializer,
-        o,
-        from_function = pyarrow.Array.from_pandas,
-        index=o.index.tolist(),
+        o.to_frame(name=DEFAULT_SERIES_NAME),
         prop_name="pandas_series_head",
         default="tabular",
     )
