@@ -25,7 +25,7 @@ encoders = dict(
 )
 
 
-def internal_serialize(serializer, o, index, prop_name, default):
+def internal_serialize(serializer, o, index, prop_name, default, from_function):
     head = serializer.get_property(prop_name, d=None) or default
 
     if not head in encoders:
@@ -37,14 +37,15 @@ def internal_serialize(serializer, o, index, prop_name, default):
 
     func = composition(encoders[head], serializer.encode)
 
-    return func(o, index)
+    return func(from_function(o, preserve_index = head =='tabular'), index)
 
 
 @encoder.dispatch(pandas.DataFrame)
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        pyarrow.RecordBatch.from_pandas(o, preserve_index=False),
+        o,
+        from_function = pyarrow.RecordBatch.from_pandas,
         index=o.index.tolist(),
         prop_name="pandas_dataframe_head",
         default="tabular",
@@ -55,7 +56,8 @@ def encoder_panda_dataframe(serializer, o):
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        pyarrow.Array.from_pandas(o),
+        o,
+        from_function = pyarrow.Array.from_pandas,
         index=o.index.tolist(),
         prop_name="pandas_dataframe_head",
         default="tabular",
@@ -69,7 +71,8 @@ def encode_panda_series(serializer, o):
 
     return internal_serialize(
         serializer,
-        pyarrow.Array.from_pandas(o),
+        o,
+        from_function = pyarrow.Array.from_pandas,
         index=o.index.tolist(),
         prop_name="pandas_series_head",
         default="tabular",
