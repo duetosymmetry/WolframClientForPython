@@ -23,6 +23,8 @@ from wolframclient.utils.api import timezone as tz
 from wolframclient.utils.datastructures import Settings
 from wolframclient.utils.encoding import force_text
 from wolframclient.utils.functional import first, iterate, last
+from wolframclient.utils.legacy import set_legacy_mode
+
 
 """
 
@@ -335,6 +337,13 @@ def Partial(consumer, result, *args):
 
 @routes.register_function
 def Cast(consumer, result, return_type):
+
+    if return_type == "Legacy":
+        set_legacy_mode(True)
+        return result
+
+    set_legacy_mode(False)
+
     if return_type == "String":
         # bug 354267 repr returns a 'str' even on py2 (i.e. bytes).
         return force_text(repr(result))

@@ -2,13 +2,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from collections import OrderedDict
 from itertools import starmap
-
+import os
 from wolframclient.language import wl
 from wolframclient.utils.api import pandas, pyarrow
 from wolframclient.utils.datastructures import Settings
 from wolframclient.utils.dispatch import Dispatch
 from wolframclient.utils.functional import composition, identity
-
+from wolframclient.utils.legacy import is_legacy_mode
 
 
 
@@ -38,15 +38,10 @@ encoders = dict(
 )
 
 
-def internal_serialize(serializer, o, prop_name, default):
-    head = serializer.get_property(prop_name, d=None) or default
+def internal_serialize(serializer, o):
 
-    if not head in encoders:
-        raise ValueError(
-            "Invalid value for property '{}'. Expecting one of ({}), got {}.".format(
-                prop_name, ", ".join(encoders.keys()), head
-            )
-        )
+    head = is_legacy_mode() and 'legacy' or 'tabular'
+
 
     if is_auto_index(o.columns):
         new_columns = [column_formatter(i) for i in range(len(o.columns))]
@@ -72,7 +67,7 @@ def internal_serialize(serializer, o, prop_name, default):
 @encoder.dispatch(pandas.DataFrame)
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
-        serializer, o, prop_name="pandas_dataframe_head", default="tabular"
+        serializer, o
     )
 
 
@@ -81,8 +76,6 @@ def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
         o.to_frame(),
-        prop_name="pandas_dataframe_head",
-        default="tabular",
     )
 
 
@@ -94,6 +87,4 @@ def encode_panda_series(serializer, o):
     return internal_serialize(
         serializer,
         o.to_frame(),
-        prop_name="pandas_series_head",
-        default="tabular",
     )

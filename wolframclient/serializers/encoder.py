@@ -200,7 +200,6 @@ class Encoder:
         encoder=None,
         object_processor=None,
         target_kernel_version=None,
-        **kwargs,
     ):
 
         self.encode = self.chain_normalizer(
@@ -208,7 +207,6 @@ class Encoder:
         )
         self.object_processor = object_processor
         self.target_kernel_version = target_kernel_version or installation_version()
-        self._properties = kwargs
 
     def chain_normalizer(self, func, encoder):
 
@@ -218,10 +216,3 @@ class Encoder:
         return composition(
             *map(safe_import_string, iterate(func or (), partial(encoder.as_method(), self)))
         )
-
-    def get_property(self, key, d=None):
-        """Return the value of the named parameter passed during initialization.
-
-        Set `d` to the default value if key was not present.
-        """
-        return self._properties.get(key) or os.environ.get('WOLFRAMCLIENT_{}'.format(key.upper())) or d
