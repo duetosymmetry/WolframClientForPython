@@ -10,11 +10,11 @@ from wolframclient.utils.dispatch import Dispatch
 from wolframclient.utils.functional import composition, identity
 
 
-def default_column_formatter(number):
-    return "Col{}".format(number)
 
 
-DEFAULT_SERIES_NAME = default_column_formatter(0)
+index_formatter = lambda number: "Index{}".format(number)
+column_formatter = lambda number: "Column{}".format(number)
+
 
 encoder = Dispatch()
 
@@ -23,22 +23,6 @@ def is_auto_index(index):
     return isinstance(index, pandas.RangeIndex)
 
 
-def set_default_names(index, func=default_column_formatter):
-    """
-    Set names for index levels that are None using a function.
-
-    Parameters:
-    - index: Index or MultiIndex
-    - func: callable that takes an integer (level position) and returns a name
-
-    Returns:
-    - Index with updated names
-    """
-
-    new_names = [
-        name if name is not None else func(i + 1) for i, name in enumerate(index.names)
-    ]
-    return index.set_names(new_names)
 
 
 def arrow_to_association(o, index):
@@ -64,8 +48,16 @@ def internal_serialize(serializer, o, prop_name, default):
             )
         )
 
+    if is_auto_index(o.columns):
+        new_columns = [column_formatter(i) for i in range(len(o.columns))]
+        o = o.set_axis(new_columns, axis=1)
+
+
     if not is_auto_index(o.index):
-        o.index = set_default_names(o.index)
+        new_names = [
+            name if name is not None else index_formatter(i) for i, name in enumerate(o.index.names)
+        ]
+        o.index = o.index.set_names(new_names)
 
     func = composition(encoders[head], serializer.encode)
 
@@ -88,7 +80,7 @@ def encoder_panda_dataframe(serializer, o):
 def encoder_panda_dataframe(serializer, o):
     return internal_serialize(
         serializer,
-        o.to_frame(name=DEFAULT_SERIES_NAME),
+        o.to_frame(),
         prop_name="pandas_dataframe_head",
         default="tabular",
     )
@@ -101,7 +93,7 @@ def encode_panda_series(serializer, o):
 
     return internal_serialize(
         serializer,
-        o.to_frame(name=DEFAULT_SERIES_NAME),
+        o.to_frame(),
         prop_name="pandas_series_head",
         default="tabular",
     )
