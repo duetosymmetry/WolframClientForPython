@@ -23,6 +23,31 @@ def is_auto_index(index):
     return isinstance(index, pandas.RangeIndex)
 
 
+def index_to_columns(index, name):
+    """Convert an index to columns, splitting mixed-type indices by type.
+
+    For a simple typed index, yields (name, values).
+    For a mixed-type index like [-1, 'a', 1] with name 'idx', yields:
+        ('idx_int', [-1, None, 1])
+        ('idx_str', [None, 'a', None])
+    For a MultiIndex, recursively processes each level.
+    """
+    if isinstance(index, pandas.MultiIndex):
+        for i, level_name in enumerate(index.names):
+            level_values = index.get_level_values(i)
+            yield from index_to_columns(level_values, level_name)
+    elif index.dtype == object and len(index) > 0 and len(set(type(v) for v in index)) > 1:
+        # Mixed-type index - split by type
+        values = index.to_series().reset_index(drop=True)
+        types_in_index = set(type(v) for v in values)
+        for typ in types_in_index:
+            col_name = f"{name}_{typ.__name__}"
+            yield col_name, pandas.Series(v if isinstance(v, typ) else None for v in values)
+    else:
+        # Simple typed index
+        yield name, index.to_series().reset_index(drop=True)
+
+
 
 def _distribute_multikey(o):
     """Distribute MultiIndex keys into nested OrderedDicts."""
@@ -94,7 +119,7 @@ def legacy_encode(serializer, o):
             ),
             length=len(o.index),
         ))
-    
+
 
 
 def pyarrow_serialize(serializer, o):
@@ -103,13 +128,21 @@ def pyarrow_serialize(serializer, o):
         o = o.set_axis(new_columns, axis=1)
 
     if not is_auto_index(o.index):
+        # Assign default names to unnamed index levels
         new_names = [
-            name if name is not None else index_formatter(i) for i, name in enumerate(o.index.names)
+            name if name is not None else index_formatter(i)
+            for i, name in enumerate(o.index.names)
         ]
         o.index = o.index.set_names(new_names)
 
+        # Convert index to columns
+        original_index = o.index
+        o = o.reset_index(drop=True)
+        for col_name, col_data in index_to_columns(original_index, new_names[0]):
+            o[col_name] = col_data
+
     return serializer.encode(
-        pyarrow.RecordBatch.from_pandas(o, preserve_index=not is_auto_index(o.index))
+        pyarrow.RecordBatch.from_pandas(o, preserve_index=False)
     )
 
 
