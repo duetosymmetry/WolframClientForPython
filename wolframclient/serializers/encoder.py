@@ -189,9 +189,6 @@ class Encoder:
     """A generic class exposing an :meth:`~wolframclient.serializers.encode.Encoder.encode`
     method applying an optional normalizer function, followed the most relevant encoding available
     for a given type.
-
-    Arbitrary named parameters passed during initialization are later accessible with
-    :meth:`~wolframclient.serializers.encode.Encoder.get_property`.
     """
 
     def __init__(
