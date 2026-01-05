@@ -59,19 +59,6 @@ oauth = API(
     SIGNATURE_TYPE_AUTH_HEADER="oauthlib.oauth1.SIGNATURE_TYPE_AUTH_HEADER",
 )
 
-pip = API(
-    main=("pip.main", "pip._internal.main", "pip._internal.main.main"),
-    get_installed_distributions=(
-        "pip.get_installed_distributions",
-        "pip.utils.get_installed_distributions",
-        "pip._internal.utils.misc.get_installed_distributions",
-    ),
-    running_under_virtualenv=(
-        "pip.locations.running_under_virtualenv",
-        "pip._internal.locations.running_under_virtualenv",
-    ),
-)
-
 zmq = API(
     Context="zmq.Context",
     Frame="zmq.Frame",
@@ -161,11 +148,10 @@ pandas = API(
     Series="pandas.Series",
     DataFrame="pandas.DataFrame",
     DatetimeIndex="pandas.DatetimeIndex",
-    TimedeltaIndex="pandas.TimedeltaIndex",
     MultiIndex="pandas.MultiIndex",
     SparseSeries="pandas.SparseSeries",
     SparseArray="pandas.SparseArray",
-    bdate_range="pandas.bdate_range",
+    RangeIndex="pandas.RangeIndex",
 )
 
 pyarrow = API(

@@ -2,68 +2,55 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from collections import OrderedDict
 from itertools import starmap
-
+import os
+from wolframclient.language import wl
 from wolframclient.utils.api import pandas, pyarrow
+from wolframclient.utils.datastructures import Settings
 from wolframclient.utils.dispatch import Dispatch
+from wolframclient.utils.functional import composition, identity
+from wolframclient.utils.legacy import is_legacy_mode
+
+
+
+index_formatter = lambda number: "Index{}".format(number)
+column_formatter = lambda number: "Column{}".format(number)
+
 
 encoder = Dispatch()
 
 
-def safe_pandas_length(o):
-    """Return the length of a pandas Series and DataFrame as expected for WL serialization.
+def is_auto_index(index):
+    return isinstance(index, pandas.RangeIndex)
 
-    - The length of a Series is the only value of the tuple `shape`.
-    - The length of a dataframe is the number of columns. It's the second value of `shape`.
 
-    This function is safe, when the shape does not have the expected number of elements, it fails silently and
-    returns `None`, the object is later traversed to find out how many elements it contains.
+def index_to_columns(index, name):
+    """Convert an index to columns, splitting mixed-type indices by type.
+
+    For a simple typed index, yields (name, values).
+    For a mixed-type index like [-1, 'a', 1] with name 'idx', yields:
+        ('idx_int', [-1, None, 1])
+        ('idx_str', [None, 'a', None])
+    For a MultiIndex, recursively processes each level.
     """
-    try:
-        return o.shape[-1]
-    except (TypeError, IndexError):
-        return
+    if isinstance(index, pandas.MultiIndex):
+        for i, level_name in enumerate(index.names):
+            level_values = index.get_level_values(i)
+            yield from index_to_columns(level_values, level_name)
+    elif index.dtype == object and len(index) > 0 and len(set(type(v) for v in index)) > 1:
+        # Mixed-type index - split by type
+        values = index.to_series().reset_index(drop=True)
+        types_in_index = set(type(v) for v in values)
+        for typ in types_in_index:
+            col_name = f"{name}_{typ.__name__}"
+            yield col_name, pandas.Series(v if isinstance(v, typ) else None for v in values)
+    else:
+        # Simple typed index
+        yield name, index.to_series().reset_index(drop=True)
 
-
-def encode_as_dataset(serializer, o, length):
-    return serializer.serialize_function(
-        serializer.serialize_symbol(b"Dataset"),
-        (encode_as_association(serializer, o, length),),
-    )
-
-
-def encode_as_list(serializer, o, length):
-    return serializer.serialize_iterable(
-        starmap(
-            lambda k, v: serializer.serialize_rule(k, v), encoded_kv_tuples(serializer, o)
-        ),
-        length=length,
-    )
-
-
-def encode_as_association(serializer, o, length):
-    return serializer.serialize_association(encoded_kv_tuples(serializer, o), length=length)
-
-
-def encoded_kv_tuples(serializer, o):
-    return ((serializer.encode(k), serializer.encode(v)) for k, v in o.items())
-
-
-def encode_as_timeseries(serializer, o, length):
-    return serializer.serialize_function(
-        serializer.serialize_symbol(b"TimeSeries"),
-        (
-            serializer.serialize_iterable(
-                (
-                    serializer.serialize_iterable(item, length=2)
-                    for item in encoded_kv_tuples(serializer, o)
-                ),
-                length=length,
-            ),
-        ),
-    )
 
 
 def _distribute_multikey(o):
+    """Distribute MultiIndex keys into nested OrderedDicts."""
     expr_dict = OrderedDict()
     for multikey, value in o.items():
         cur_dict = expr_dict
@@ -75,117 +62,109 @@ def _distribute_multikey(o):
     return expr_dict
 
 
-def encode_multiindex_as_assoc(serializer, o, length):
-    return serializer.encode(_distribute_multikey(o))
+def legacy_encode_series(serializer, series):
+    """Encode a Series based on its index type.
 
+    - DatetimeIndex -> TimeSeries
+    - MultiIndex -> nested associations
+    - Regular index -> association
+    """
+    length = len(series)
 
-def encode_multiindex_as_dataset(serializer, o, length):
-    return serializer.serialize_function(
-        serializer.serialize_symbol(b"Dataset"), (serializer.encode(_distribute_multikey(o)),)
-    )
-
-
-PANDAS_PROPERTIES = {
-    "pandas_series_head": {"dataset", "list", "association"},
-    "pandas_dataframe_head": {"dataset", "association", "tabular"},
-    "timeseries": True,
-}
-
-ENCODERS = {
-    "default": {
-        "dataset": encode_as_dataset,
-        "list": encode_as_list,
-        "association": encode_as_association,
-    },
-    "datetimeindex": encode_as_timeseries,
-    "multiindex": {
-        "association": encode_multiindex_as_assoc,
-        "list": encode_multiindex_as_assoc,
-        "dataset": encode_multiindex_as_dataset,
-    },
-}
-
-
-def get_series_encoder_from_index(index, use_ts, form):
-    if use_ts and isinstance(index, pandas.DatetimeIndex):
-        return ENCODERS["datetimeindex"]
-    elif isinstance(index, pandas.MultiIndex):
-        return ENCODERS["multiindex"][form or "dataset"]
-    else:
-        return ENCODERS["default"][form or "association"]
-
-
-INVALID_PROPERTY_MSG = "Invalid property %s, expecting %s"
-
-
-def normalized_prop_timeseries(serializer):
-    prop = serializer.get_property("timeseries", d=True)
-    if not isinstance(prop, bool):
-        raise ValueError(
-            "Invalid value for property 'timeseries'. Expecting a boolean, got %s." % prop
-        )
-    return prop
-
-
-def normalized_prop_pandas_series_head(serializer):
-    """Check property `pandas_series_head` only if specified (not None)."""
-    prop = serializer.get_property("pandas_series_head", d=None)
-    if prop and prop not in PANDAS_PROPERTIES["pandas_series_head"]:
-        raise ValueError(
-            "Invalid value for property 'pandas_series_head'. Expecting one of ({}), got {}.".format(
-                ", ".join(PANDAS_PROPERTIES["pandas_series_head"]), prop
-            )
-        )
-    return prop
-
-
-@encoder.dispatch(pandas.Series)
-def encode_panda_series(serializer, o):
-    use_ts = normalized_prop_timeseries(serializer)
-    form = normalized_prop_pandas_series_head(serializer)
-    encoder = get_series_encoder_from_index(o.index, use_ts, form)
-    return encoder(serializer, o, safe_pandas_length(o))
-
-
-def encode_dataframe_as_assoc(serializer, o, length):
-    use_ts = normalized_prop_timeseries(serializer)
-    return serializer.serialize_association(
-        (
+    if isinstance(series.index, pandas.DatetimeIndex):
+        # Encode as TimeSeries
+        return serializer.serialize_function(
+            serializer.serialize_symbol(b"TimeSeries"),
             (
-                serializer.encode(k),
-                get_series_encoder_from_index(v.index, use_ts, "association")(
-                    serializer, v, safe_pandas_length(v)
+                serializer.serialize_iterable(
+                    (
+                        serializer.serialize_iterable(
+                            (serializer.encode(idx), serializer.encode(val)), length=2
+                        )
+                        for idx, val in series.items()
+                    ),
+                    length=length,
                 ),
+            ),
+        )
+    elif isinstance(series.index, pandas.MultiIndex):
+        # Encode as nested associations
+        return serializer.encode(_distribute_multikey(series))
+    else:
+        # Encode as simple association
+        return serializer.serialize_association(
+                (
+                    (serializer.encode(idx), serializer.encode(val))
+                    for idx, val in series.items()
+                ),
+                length=length,
             )
-            for k, v in o.T.items()
-        ),
-        length=length,
-    )
 
-
-def encode_dataframe_as_dataset(serializer, o, length):
+def dataset(serializer, *args):
     return serializer.serialize_function(
         serializer.serialize_symbol(b"Dataset"),
-        (encode_dataframe_as_assoc(serializer, o, length),),
+        args,
     )
 
+def legacy_encode(serializer, o):
+    """Encode DataFrame as Dataset[<association of row -> association of col -> value>].
 
-def encode_dataframe_as_tabular(serializer, o):
-    return serializer.encode(pyarrow.record_batch(o))
+    This replicates the old default behavior before the tabular implementation.
+    The old code used o.T.items() to iterate over rows (transposed columns become rows).
+    """
+    return dataset(serializer, serializer.serialize_association(
+            (
+                (serializer.encode(k), legacy_encode_series(serializer, v))
+                for k, v in o.T.items()
+            ),
+            length=len(o.index),
+        ))
+
+
+
+def pyarrow_serialize(serializer, o):
+    if is_auto_index(o.columns):
+        new_columns = [column_formatter(i) for i in range(len(o.columns))]
+        o = o.set_axis(new_columns, axis=1)
+
+    if not is_auto_index(o.index):
+        # Assign default names to unnamed index levels
+        new_names = [
+            name if name is not None else index_formatter(i)
+            for i, name in enumerate(o.index.names)
+        ]
+        o.index = o.index.set_names(new_names)
+
+        # Convert index to columns
+        original_index = o.index
+        o = o.reset_index(drop=True)
+        for col_name, col_data in index_to_columns(original_index, new_names[0]):
+            o[col_name] = col_data
+
+    return serializer.encode(
+        pyarrow.RecordBatch.from_pandas(o, preserve_index=False)
+    )
 
 
 @encoder.dispatch(pandas.DataFrame)
 def encoder_panda_dataframe(serializer, o):
-    head = serializer.get_property("pandas_dataframe_head", d=None)
-    if head is None or head == "dataset":
-        return encode_dataframe_as_dataset(serializer, o, safe_pandas_length(o.index))
-    elif head == "tabular":
-        return encode_dataframe_as_tabular(serializer, o)
-    elif head in PANDAS_PROPERTIES["pandas_dataframe_head"]:
-        return encode_dataframe_as_assoc(serializer, o, safe_pandas_length(o.index))
-    else:
-        raise ValueError(
-            "Invalid value for property 'pandas_dataframe_head'. Expecting one of ({}), got {}.".format(
-                ", ".join(PANDAS_PROPERTIES["pandas_dataframe_head"]), head
-            )
-        )
+    if is_legacy_mode():
+        return legacy_encode(serializer, o)
+    return pyarrow_serialize(serializer, o)
+
+
+@encoder.dispatch(pandas.DatetimeIndex)
+def encoder_panda_datetimeindex(serializer, o):
+    if is_legacy_mode():
+        return legacy_encode_series(serializer, o.to_series())
+    return pyarrow_serialize(serializer, o.to_frame())
+
+
+@encoder.dispatch(pandas.Series)
+def encode_panda_series(serializer, o):
+    if hasattr(o, "sparse"):
+        o = o.sparse.to_dense()
+
+    if is_legacy_mode():
+        return legacy_encode_series(serializer, o)
+    return pyarrow_serialize(serializer, o.to_frame())

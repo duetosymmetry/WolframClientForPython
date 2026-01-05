@@ -50,13 +50,15 @@ SYS_IS_LE = sys.byteorder == "little"
 def to_little_endian(array, inplace=False):
     """Return a numpy array of the same type with little endian byte ordering.
 
-    Set `inplace` to `True` to mutate the input array."""
+    Set `inplace` to `True` to mutate the input array.
+    Works in all NumPy versions (1.x and 2.x).
+    """
     endianness = array.dtype.byteorder
     if endianness == ">" or (endianness == "=" and not SYS_IS_LE):
-        return array.byteswap(inplace=inplace).newbyteorder()
+        array = array.byteswap(inplace=inplace)
+        return array.view(array.dtype.newbyteorder("<"))
     else:
         return array
-
 
 def _iencode(serializer, o, mapping, processor):
 

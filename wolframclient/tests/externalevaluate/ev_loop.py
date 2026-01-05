@@ -13,7 +13,7 @@ from wolframclient.utils.tests import TestCase as BaseTestCase
 def create_evaluation_command(
     string, context={}, hook_symbol=wl.ExternalEvaluate.Private.ExternalEvaluateCommand
 ):
-    return hook_symbol("Eval", (string, context))
+    return hook_symbol("Eval", string, context)
 
 
 class TestCase(BaseTestCase):

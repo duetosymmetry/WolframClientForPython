@@ -6,7 +6,6 @@ import sys
 
 from wolframclient.utils.decorators import to_dict
 from wolframclient.utils.importutils import module_path
-from wolframclient.utils.require import require_module
 
 if hasattr(os, "scandir"):
     # python2 do not support scan which is way faster
@@ -46,11 +45,8 @@ def discover_with_convention(modules, import_name, walk=True):
 
 
 class SimpleCommand:
-
     help = None
     print = print
-
-    dependencies = ()
 
     def __init__(self, argv=None, name=None):
         if argv is None:
@@ -70,10 +66,6 @@ class SimpleCommand:
         pass
 
     def main(self):
-
-        if self.dependencies:
-            require_module(*self.dependencies)
-
         parser = self.create_parser()
         if parser:
             self.add_arguments(parser)
