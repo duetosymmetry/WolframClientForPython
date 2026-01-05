@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# export PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp/}rotostampa-pycache"
-
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 
 uv run                                            \
