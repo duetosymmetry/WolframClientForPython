@@ -338,7 +338,7 @@ def Partial(consumer, result, *args):
 @routes.register_function
 def Cast(consumer, result, return_type):
 
-    if return_type == "Legacy":
+    if return_type == "LegacyExpression":
         set_legacy_mode(True)
         return result
 
