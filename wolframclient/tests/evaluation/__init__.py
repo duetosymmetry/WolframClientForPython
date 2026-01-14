@@ -23,6 +23,7 @@ __all__ = ["load_tests"]
 
 def load_tests(loader, tests, pattern):
     import unittest
+
     suite = unittest.TestSuite()
     for module in test_modules:
         if fnmatch.fnmatch(os.path.basename(module.__file__), pattern):

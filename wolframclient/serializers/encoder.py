@@ -36,6 +36,7 @@ class WolframDispatch(Dispatch):
             logger.info(
                 "Registering Wolfram encoders plugins associated with entrypoint %s." % name
             )
+
     def _update_dispatch(self):
         if self.modules:
             installed_modules = sys.modules.keys()
@@ -192,11 +193,7 @@ class Encoder:
     """
 
     def __init__(
-        self,
-        normalizer=None,
-        encoder=None,
-        object_processor=None,
-        target_kernel_version=None,
+        self, normalizer=None, encoder=None, object_processor=None, target_kernel_version=None
     ):
 
         self.encode = self.chain_normalizer(

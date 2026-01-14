@@ -571,7 +571,7 @@ class TestArrayRoundTrip(BaseTestCase):
         self.ensure_roundtrip(pa)
 
     def test_int64(self):
-        pa = numpy.array([[-(1 << 62)], [(1 << 62)]], numpy.int64).view(numpy.PackedArray)
+        pa = numpy.array([[-(1 << 62)], [1 << 62]], numpy.int64).view(numpy.PackedArray)
         self.ensure_roundtrip(pa)
 
     def test_uint8_RA(self):

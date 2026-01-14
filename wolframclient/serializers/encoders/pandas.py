@@ -10,6 +10,7 @@ from wolframclient.utils.functional import composition, identity
 from wolframclient.utils.legacy import is_legacy_mode
 from wolframclient.serializers import export
 from wolframclient.utils.api import pandas, pyarrow
+from wolframclient.serializers import export
 
 
 index_formatter = lambda number: "Index{}".format(number + 1)
@@ -55,7 +56,6 @@ def index_to_columns(index, name):
             yield from index_to_columns(level_values, level_name)
     elif index.dtype == object and len(index) > 0 and len(set(type(v) for v in index)) > 1:
         # Mixed-type index - encode each value as WXF with extension type
-        from wolframclient.serializers import export
 
         wxf_data = [export(v, target_format="wxf") for v in index]
 

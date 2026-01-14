@@ -6,6 +6,7 @@ from wolframclient.utils.dispatch import Dispatch
 
 encoder = Dispatch()
 
+
 @encoder.dispatch(io.IOBase.__mro__)
 def encode_quantity(serializer, o):
 
