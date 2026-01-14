@@ -49,6 +49,9 @@ class TestCase(BaseTestCase):
         """Test that export works for all cases."""
         for python_expr in TEST_CASES:
             with self.subTest(expr=python_expr):
-                data = eval(python_expr, {"pandas": pandas, "float": float, "list": list, "range": range})
+                data = eval(
+                    python_expr,
+                    {"pandas": pandas, "float": float, "list": list, "range": range},
+                )
                 export(data, target_format="wl")
                 export(data, target_format="wxf")

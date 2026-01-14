@@ -105,7 +105,7 @@ class TestCase(BaseTestCase):
 
     def test_int64(self):
 
-        arr = numpy.array([[-(1 << 62)], [(1 << 62)]], numpy.int64)
+        arr = numpy.array([[-(1 << 62)], [1 << 62]], numpy.int64)
         self.compare_serializer(
             self.initDefault(),
             arr,
@@ -218,8 +218,7 @@ class TestCase(BaseTestCase):
             numpy.uint64(18446744073709551615),
         ]
         self.assertEqual(
-            export(ints),
-            b"{65535, -2147483648, -9223372036854775808, 18446744073709551615}",
+            export(ints), b"{65535, -2147483648, -9223372036854775808, 18446744073709551615}"
         )
 
     def test_scalars(self):

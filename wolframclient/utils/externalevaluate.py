@@ -327,6 +327,7 @@ def FromMissing(consumer):
 def FromArrow(consumer, bytes):
     return pyarrow.ipc.RecordBatchFileReader(bytes).read_all()
 
+
 @routes.register_function
 def Partial(consumer, result, *args):
 

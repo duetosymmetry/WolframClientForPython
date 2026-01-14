@@ -60,6 +60,7 @@ def to_little_endian(array, inplace=False):
     else:
         return array
 
+
 def _iencode(serializer, o, mapping, processor):
 
     if not o.shape:
