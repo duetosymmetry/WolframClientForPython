@@ -152,15 +152,20 @@ pandas = API(
     SparseSeries="pandas.SparseSeries",
     SparseArray="pandas.SparseArray",
     RangeIndex="pandas.RangeIndex",
+    ArrowDtype="pandas.ArrowDtype",
 )
 
 pyarrow = API(
     Table="pyarrow.Table",
     RecordBatch="pyarrow.RecordBatch",
     Array="pyarrow.Array",
+    array="pyarrow.array",
+    binary="pyarrow.binary",
+    ExtensionArray="pyarrow.ExtensionArray",
     BufferOutputStream="pyarrow.BufferOutputStream",
     record_batch="pyarrow.record_batch",
     ipc="pyarrow.ipc",
+    ExtensionType="pyarrow.ExtensionType",
 )
 
 aiohttp = API(

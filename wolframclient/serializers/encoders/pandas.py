@@ -4,16 +4,16 @@ from collections import OrderedDict
 from itertools import starmap
 import os
 from wolframclient.language import wl
-from wolframclient.utils.api import pandas, pyarrow
 from wolframclient.utils.datastructures import Settings
 from wolframclient.utils.dispatch import Dispatch
 from wolframclient.utils.functional import composition, identity
 from wolframclient.utils.legacy import is_legacy_mode
+from wolframclient.serializers import export
+from wolframclient.utils.api import pandas, pyarrow
 
 
-
-index_formatter = lambda number: "Index{}".format(number)
-column_formatter = lambda number: "Column{}".format(number)
+index_formatter = lambda number: "Index{}".format(number + 1)
+column_formatter = lambda number: "Column{}".format(number + 1)
 
 
 encoder = Dispatch()
@@ -23,13 +23,30 @@ def is_auto_index(index):
     return isinstance(index, pandas.RangeIndex)
 
 
+class WolframExpressionType(pyarrow.ExtensionType):
+    def __init__(self):
+        super().__init__(pyarrow.binary(), "wolfram.expression")
+
+    def __reduce__(self):
+        return WolframExpressionType, ()
+
+    def __arrow_ext_serialize__(self):
+        return b""
+
+    @classmethod
+    def __arrow_ext_deserialize__(cls, storage_type, serialized):
+        return cls()
+
+
+# Register the extension type
+_wolfram_type = WolframExpressionType()
+
+
 def index_to_columns(index, name):
     """Convert an index to columns, splitting mixed-type indices by type.
 
     For a simple typed index, yields (name, values).
-    For a mixed-type index like [-1, 'a', 1] with name 'idx', yields:
-        ('idx_int', [-1, None, 1])
-        ('idx_str', [None, 'a', None])
+    For a mixed-type index like [-1, 'a', 1] with name 'idx', encodes as WXF.
     For a MultiIndex, recursively processes each level.
     """
     if isinstance(index, pandas.MultiIndex):
@@ -37,16 +54,24 @@ def index_to_columns(index, name):
             level_values = index.get_level_values(i)
             yield from index_to_columns(level_values, level_name)
     elif index.dtype == object and len(index) > 0 and len(set(type(v) for v in index)) > 1:
-        # Mixed-type index - split by type
-        values = index.to_series().reset_index(drop=True)
-        types_in_index = set(type(v) for v in values)
-        for typ in types_in_index:
-            col_name = f"{name}_{typ.__name__}"
-            yield col_name, pandas.Series(v if isinstance(v, typ) else None for v in values)
+        # Mixed-type index - encode each value as WXF with extension type
+        from wolframclient.serializers import export
+
+        wxf_data = [export(v, target_format="wxf") for v in index]
+
+        # Create PyArrow array with custom extension type
+        storage_array = pyarrow.array(wxf_data, type=pyarrow.binary())
+        extension_array = pyarrow.ExtensionArray.from_storage(_wolfram_type, storage_array)
+
+        # Convert to pandas, but preserve the Arrow type
+        series = pandas.Series(extension_array)
+        # Ensure the Arrow type is preserved
+        series = series.astype(pandas.ArrowDtype(_wolfram_type))
+
+        yield name, series
     else:
         # Simple typed index
         yield name, index.to_series().reset_index(drop=True)
-
 
 
 def _distribute_multikey(o):
@@ -93,18 +118,14 @@ def legacy_encode_series(serializer, series):
     else:
         # Encode as simple association
         return serializer.serialize_association(
-                (
-                    (serializer.encode(idx), serializer.encode(val))
-                    for idx, val in series.items()
-                ),
-                length=length,
-            )
+            ((serializer.encode(idx), serializer.encode(val)) for idx, val in series.items()),
+            length=length,
+        )
+
 
 def dataset(serializer, *args):
-    return serializer.serialize_function(
-        serializer.serialize_symbol(b"Dataset"),
-        args,
-    )
+    return serializer.serialize_function(serializer.serialize_symbol(b"Dataset"), args)
+
 
 def legacy_encode(serializer, o):
     """Encode DataFrame as Dataset[<association of row -> association of col -> value>].
@@ -112,14 +133,16 @@ def legacy_encode(serializer, o):
     This replicates the old default behavior before the tabular implementation.
     The old code used o.T.items() to iterate over rows (transposed columns become rows).
     """
-    return dataset(serializer, serializer.serialize_association(
+    return dataset(
+        serializer,
+        serializer.serialize_association(
             (
                 (serializer.encode(k), legacy_encode_series(serializer, v))
                 for k, v in o.T.items()
             ),
             length=len(o.index),
-        ))
-
+        ),
+    )
 
 
 def pyarrow_serialize(serializer, o):
@@ -135,15 +158,24 @@ def pyarrow_serialize(serializer, o):
         ]
         o.index = o.index.set_names(new_names)
 
-        # Convert index to columns
+        # Convert index to columns and insert at the beginning
         original_index = o.index
-        o = o.reset_index(drop=True)
-        for col_name, col_data in index_to_columns(original_index, new_names[0]):
-            o[col_name] = col_data
 
-    return serializer.encode(
-        pyarrow.RecordBatch.from_pandas(o, preserve_index=False)
-    )
+        # Build new DataFrame with index columns first
+        result_cols = OrderedDict()
+
+        # First, add index columns
+        for col_name, col_data in index_to_columns(original_index, new_names[0]):
+            result_cols[col_name] = col_data
+
+        # Then add original data columns (with reset index)
+        for col in o.columns:
+            result_cols[col] = o[col].reset_index(drop=True)
+
+        # Create result DataFrame with index columns first
+        o = pandas.DataFrame(result_cols)
+
+    return serializer.encode(pyarrow.RecordBatch.from_pandas(o, preserve_index=False))
 
 
 @encoder.dispatch(pandas.DataFrame)
