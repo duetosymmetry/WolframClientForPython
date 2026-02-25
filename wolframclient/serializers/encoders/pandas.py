@@ -200,3 +200,8 @@ def encode_panda_series(serializer, o):
     if is_legacy_mode():
         return legacy_encode_series(serializer, o)
     return pyarrow_serialize(serializer, o.to_frame())
+
+
+@encoder.dispatch(pandas.NaT)
+def encode_pandas_not_a_time(serializer, o):
+    return serializer.serialize_symbol(b"Indeterminate")

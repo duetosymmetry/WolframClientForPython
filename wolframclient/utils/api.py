@@ -153,6 +153,7 @@ pandas = API(
     SparseArray="pandas.SparseArray",
     RangeIndex="pandas.RangeIndex",
     ArrowDtype="pandas.ArrowDtype",
+    NaT="pandas.api.typing.NaTType",
 )
 
 pyarrow = API(
