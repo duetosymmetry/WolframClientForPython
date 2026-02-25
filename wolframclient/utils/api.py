@@ -168,6 +168,7 @@ pandas = API(
     SparseSeries="pandas.SparseSeries",
     SparseArray="pandas.SparseArray",
     bdate_range="pandas.bdate_range",
+    NaT="pandas.api.typing.NaTType",
 )
 
 aiohttp = API(

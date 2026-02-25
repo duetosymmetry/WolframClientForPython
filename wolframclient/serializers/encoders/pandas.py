@@ -183,3 +183,8 @@ def encoder_panda_dataframe(serializer, o):
                 ", ".join(PANDAS_PROPERTIES["pandas_dataframe_head"]), head
             )
         )
+
+
+@encoder.dispatch(pandas.NaT)
+def encode_pandas_not_a_time(serializer, o):
+    return serializer.serialize_symbol(b"Indeterminate")
