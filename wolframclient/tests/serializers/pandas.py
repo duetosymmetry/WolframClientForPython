@@ -55,3 +55,15 @@ class TestCase(BaseTestCase):
                 )
                 export(data, target_format="wl")
                 export(data, target_format="wxf")
+
+    def test_nat_encodes_as_indeterminate(self):
+        import pandas as pd
+
+        result = export(pd.NaT, target_format="wl")
+        self.assertEqual(result, b"Indeterminate")
+
+    def test_nat_wxf(self):
+        import pandas as pd
+
+        result = export(pd.NaT, target_format="wxf")
+        self.assertIn(b"Indeterminate", result)
